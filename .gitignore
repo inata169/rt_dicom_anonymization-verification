@@ -1,0 +1,49 @@
+# Python関連
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 仮想環境
+venv/
+ENV/
+
+# データディレクトリ
+data/input_dicom/
+data/anonymous_dicom/
+data/logs/
+data/validation_reports/
+
+# ビルド関連
+*.spec
+build/
+dist/
+
+# 特定のDICOMファイル
+*.dcm
+
+# IDE設定
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS関連
+.DS_Store
+Thumbs.db
