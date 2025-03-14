@@ -301,6 +301,53 @@ class RTDicomValidator:
             self.logger.error(traceback.format_exc())
             return None
     
+    def _generate_matching_key(self, dcm):
+        """
+        DICOMファイルからマッチングに使用するキーを生成
+        
+        Args:
+            dcm: pydicomで読み込んだDICOMデータセット
+            
+        Returns:
+            マッチングに使用するキー文字列、生成できない場合はNone
+        """
+        try:
+            # マッチングに使用するタグのリスト
+            # モダリティ、シリーズ番号、インスタンス番号などを使用
+            key_parts = []
+            
+            # モダリティ
+            if hasattr(dcm, 'Modality'):
+                key_parts.append(f"MOD:{dcm.Modality}")
+            
+            # シリーズ番号
+            if hasattr(dcm, 'SeriesNumber'):
+                key_parts.append(f"SER:{dcm.SeriesNumber}")
+            
+            # インスタンス番号
+            if hasattr(dcm, 'InstanceNumber'):
+                key_parts.append(f"INS:{dcm.InstanceNumber}")
+            
+            # 画像の位置（スライス位置）
+            if hasattr(dcm, 'ImagePositionPatient'):
+                # 小数点以下を切り捨てて文字列化
+                pos = [str(int(float(p))) for p in dcm.ImagePositionPatient]
+                key_parts.append(f"POS:{','.join(pos)}")
+            
+            # SOPクラスUID（ファイルの種類を示す）
+            if hasattr(dcm, 'SOPClassUID'):
+                key_parts.append(f"SOP:{dcm.SOPClassUID}")
+            
+            # キーパーツが少なくとも2つ以上あれば有効なキーとみなす
+            if len(key_parts) >= 2:
+                return "|".join(key_parts)
+            else:
+                return None
+                
+        except Exception as e:
+            self.logger.warning(f"マッチングキー生成エラー: {e}")
+            return None
+
     def validate_files(self, original_dir, anonymized_dir):
         """
         ディレクトリ内のファイルを検証する
@@ -341,14 +388,26 @@ class RTDicomValidator:
             # 匿名化前後のファイルをマッチングして検証
             progress_count = 0
             
-            # マッチングの手法を選択（ここでは簡易的に同じ相対パスで比較）
-            # 実際には、モダリティとシリーズ番号など、他の属性でマッチングする方が良い場合も
+            # マッチングの手法を選択
+            # 1. まず相対パスでマッチングを試みる
+            # 2. パスでマッチングできない場合は、DICOMタグの情報を使用してマッチング
             original_files_map = {}
+            original_files_info = {}
             
             # 原本ファイルをマップに追加
             for file_path in original_files:
+                # 相対パスでのマッチング用
                 rel_path = file_path.relative_to(original_dir)
                 original_files_map[str(rel_path)] = file_path
+                
+                # DICOMタグでのマッチング用
+                try:
+                    dcm = pydicom.dcmread(str(file_path), force=True, stop_before_pixels=True)
+                    key = self._generate_matching_key(dcm)
+                    if key:
+                        original_files_info[key] = file_path
+                except Exception as e:
+                    self.logger.warning(f"原本ファイル読み込みエラー: {file_path} - {e}")
             
             # マッチングして検証
             for anon_file in anonymized_files:
@@ -362,10 +421,25 @@ class RTDicomValidator:
                 try:
                     # 相対パスでマッチング
                     rel_path = anon_file.relative_to(anonymized_dir)
+                    orig_file = None
                     
-                    # マッチする原本ファイルを探す
+                    # 1. パスでマッチング
                     if str(rel_path) in original_files_map:
                         orig_file = original_files_map[str(rel_path)]
+                        self.log_message(f"パスでマッチング成功: {rel_path}")
+                    else:
+                        # 2. DICOMタグでマッチング
+                        try:
+                            dcm = pydicom.dcmread(str(anon_file), force=True, stop_before_pixels=True)
+                            key = self._generate_matching_key(dcm)
+                            if key and key in original_files_info:
+                                orig_file = original_files_info[key]
+                                self.log_message(f"タグでマッチング成功: {anon_file.name} -> {orig_file.name}")
+                        except Exception as e:
+                            self.logger.warning(f"匿名化ファイル読み込みエラー: {anon_file} - {e}")
+                    
+                    # マッチするファイルが見つかった場合
+                    if orig_file:
                         
                         self.log_message(f"検証中: {rel_path}")
                         
@@ -436,7 +510,9 @@ class RTDicomValidator:
                             
                             # GUIがある場合はツリービューを更新
                             if self.root and hasattr(self, 'update_treeview'):
-                                self.update_treeview(results)
+                                # 最初のファイルのみclear=Trueで呼び出し、以降はclear=Falseで呼び出す
+                                clear = (progress_count == 1)
+                                self.update_treeview(results, clear=clear)
                     else:
                         self.log_message(f"マッチするファイルなし: {rel_path}")
                 

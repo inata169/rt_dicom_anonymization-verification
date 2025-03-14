@@ -229,17 +229,21 @@ class ValidatorGUI:
             self.validator.report_dir = Path(directory)
             self.validator.log_message(f"レポートディレクトリを設定: {directory}")
     
-    def update_treeview(self, results):
+    def update_treeview(self, results, clear=True):
         """ツリービューを結果で更新する"""
         try:
-            self.tree.delete(*self.tree.get_children())
-            
-            # タグ分類ごとにグループを作成
-            must_anonymize_group = self.tree.insert("", "end", text="必須匿名化タグ", open=True)
-            uid_group = self.tree.insert("", "end", text="UIDタグ", open=True)
-            structure_group = self.tree.insert("", "end", text="構造タグ", open=True)
-            optional_group = self.tree.insert("", "end", text="オプション匿名化タグ", open=True)
-            rt_group = self.tree.insert("", "end", text="RT特有タグ", open=True)
+            # 初回のみツリービューをクリア
+            if clear:
+                self.tree.delete(*self.tree.get_children())
+                
+                # タグ分類ごとにグループを作成
+                self.must_anonymize_group = self.tree.insert("", "end", text="必須匿名化タグ", open=True)
+                self.uid_group = self.tree.insert("", "end", text="UIDタグ", open=True)
+                self.structure_group = self.tree.insert("", "end", text="構造タグ", open=True)
+                self.optional_group = self.tree.insert("", "end", text="オプション匿名化タグ", open=True)
+                self.rt_group = self.tree.insert("", "end", text="RT特有タグ", open=True)
+                self.private_group = self.tree.insert("", "end", text="プライベートタグ", open=True)
+                self.pixel_group = self.tree.insert("", "end", text="画像データ", open=True)
             
             # 必須匿名化タグを追加
             for tag, info in results["must_anonymize"].items():
@@ -260,7 +264,7 @@ class ValidatorGUI:
                 else:
                     status = "❌ " + status
                 
-                self.tree.insert(must_anonymize_group, "end", text=tag, values=(orig_value, anon_value, status))
+                self.tree.insert(self.must_anonymize_group, "end", text=tag, values=(orig_value, anon_value, status))
             
             # UIDタグを追加
             for tag, info in results["uid_tags"].items():
@@ -279,7 +283,7 @@ class ValidatorGUI:
                 else:
                     status = "❌ " + status
                 
-                self.tree.insert(uid_group, "end", text=tag, values=(orig_value, anon_value, status))
+                self.tree.insert(self.uid_group, "end", text=tag, values=(orig_value, anon_value, status))
             
             # 構造タグを追加
             for tag, info in results["structure_tags"].items():
@@ -297,7 +301,7 @@ class ValidatorGUI:
                 else:
                     status = "❌ " + status
                 
-                self.tree.insert(structure_group, "end", text=tag, values=(orig_value, anon_value, status))
+                self.tree.insert(self.structure_group, "end", text=tag, values=(orig_value, anon_value, status))
             
             # オプション匿名化タグを追加
             for tag, info in results["optional_tags"].items():
@@ -320,7 +324,7 @@ class ValidatorGUI:
                     # 部分匿名化の場合は常にOK
                     status = "✅ " + status
                 
-                self.tree.insert(optional_group, "end", text=tag, values=(orig_value, anon_value, status))
+                self.tree.insert(self.optional_group, "end", text=tag, values=(orig_value, anon_value, status))
             
             # RT特有タグを追加
             for tag, info in results["rt_specific_tags"].items():
@@ -340,20 +344,18 @@ class ValidatorGUI:
                 else:
                     status = "ℹ️ " + status
                 
-                self.tree.insert(rt_group, "end", text=tag, values=(orig_value, anon_value, status))
+                self.tree.insert(self.rt_group, "end", text=tag, values=(orig_value, anon_value, status))
             
             # プライベートタグの情報を追加
-            private_group = self.tree.insert("", "end", text="プライベートタグ", open=True)
             original_count = results["private_tags"]["original_count"]
             anonymized_count = results["private_tags"]["anonymized_count"]
             
             status = "✅ すべて削除" if anonymized_count == 0 else f"❌ {anonymized_count}個残存"
-            self.tree.insert(private_group, "end", text="プライベートタグ数", 
+            self.tree.insert(self.private_group, "end", text="プライベートタグ数", 
                            values=(f"{original_count}個", f"{anonymized_count}個", status))
             
             # ピクセルデータの情報を追加（あれば）
             if results["pixel_data"]["original_shape"] is not None:
-                pixel_group = self.tree.insert("", "end", text="画像データ", open=True)
                 orig_shape = results["pixel_data"]["original_shape"]
                 anon_shape = results["pixel_data"]["anonymized_shape"]
                 
@@ -361,11 +363,11 @@ class ValidatorGUI:
                 pixel_match = results["pixel_data"]["match"]
                 
                 shape_status = "✅ 一致" if shape_match else "❌ 不一致"
-                self.tree.insert(pixel_group, "end", text="画像サイズ", 
+                self.tree.insert(self.pixel_group, "end", text="画像サイズ", 
                                values=(str(orig_shape), str(anon_shape), shape_status))
                 
                 pixel_status = "✅ 一致" if pixel_match else "❌ 不一致"
-                self.tree.insert(pixel_group, "end", text="ピクセル値", 
+                self.tree.insert(self.pixel_group, "end", text="ピクセル値", 
                                values=("原本データ", "匿名化データ", pixel_status))
             
         except Exception as e:
