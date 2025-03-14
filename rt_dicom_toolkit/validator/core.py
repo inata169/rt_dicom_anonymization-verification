@@ -280,6 +280,22 @@ class RTDicomValidator:
             # ピクセルデータの比較（画像データがある場合）
             if hasattr(original_dcm, 'PixelData') and hasattr(anonymized_dcm, 'PixelData'):
                 try:
+                    # TransferSyntaxUIDの確認
+                    original_transfer_syntax = None
+                    anonymized_transfer_syntax = None
+                    
+                    # FileMetaがあり、TransferSyntaxUIDが存在する場合のみ取得
+                    if hasattr(original_dcm, 'file_meta') and hasattr(original_dcm.file_meta, 'TransferSyntaxUID'):
+                        original_transfer_syntax = original_dcm.file_meta.TransferSyntaxUID
+                    
+                    if hasattr(anonymized_dcm, 'file_meta') and hasattr(anonymized_dcm.file_meta, 'TransferSyntaxUID'):
+                        anonymized_transfer_syntax = anonymized_dcm.file_meta.TransferSyntaxUID
+                    
+                    # 転送構文が異なる場合は警告
+                    if original_transfer_syntax != anonymized_transfer_syntax:
+                        self.logger.warning(f"転送構文が異なります: 原本={original_transfer_syntax}, 匿名化={anonymized_transfer_syntax}")
+                    
+                    # ピクセルデータの比較
                     original_pixel_array = original_dcm.pixel_array
                     anonymized_pixel_array = anonymized_dcm.pixel_array
                     

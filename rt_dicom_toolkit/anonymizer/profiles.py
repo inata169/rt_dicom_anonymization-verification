@@ -43,15 +43,15 @@ def get_anonymization_profile(anonymizer):
         "SOPInstanceUID": lambda x: generate_uid(),
         "FrameOfReferenceUID": lambda x: generate_uid(),
         
-        # 日付と時刻（日付の年を2000年に設定、月日はそのまま）
-        "StudyDate": lambda x: "2000" + str(x)[4:] if len(str(x)) == 8 else "20000101",
-        "SeriesDate": lambda x: "2000" + str(x)[4:] if len(str(x)) == 8 else "20000101",
-        "AcquisitionDate": lambda x: "2000" + str(x)[4:] if len(str(x)) == 8 else "20000101",
-        "ContentDate": lambda x: "2000" + str(x)[4:] if len(str(x)) == 8 else "20000101",
-        "StudyTime": lambda x: "000000.000" if len(str(x)) < 6 else str(x),
-        "SeriesTime": lambda x: "000000.000" if len(str(x)) < 6 else str(x),
-        "AcquisitionTime": lambda x: "000000.000" if len(str(x)) < 6 else str(x),
-        "ContentTime": lambda x: "000000.000" if len(str(x)) < 6 else str(x),
+        # 日付と時刻（完全に匿名化）
+        "StudyDate": "20000101",
+        "SeriesDate": "20000101",
+        "AcquisitionDate": "20000101",
+        "ContentDate": "20000101",
+        "StudyTime": "000000.000",
+        "SeriesTime": "000000.000",
+        "AcquisitionTime": "000000.000",
+        "ContentTime": "000000.000",
         
         # その他の識別情報
         "DeviceSerialNumber": "",

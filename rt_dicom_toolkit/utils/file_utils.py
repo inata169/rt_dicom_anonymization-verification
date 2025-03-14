@@ -24,9 +24,29 @@ def find_dicom_files(directory):
             try:
                 # DICOMファイルとして読み込めるか確認
                 dcm = pydicom.dcmread(str(file_path), force=True, stop_before_pixels=True)
+                
+                # DICOMファイルの判定条件を緩和
+                # SOPClassUIDがなくても、他の一般的なDICOMタグがあればDICOMファイルとみなす
+                is_dicom = False
+                
+                # SOPClassUIDがあればDICOMファイル
                 if hasattr(dcm, 'SOPClassUID'):
+                    is_dicom = True
+                # モダリティがあればDICOMファイル
+                elif hasattr(dcm, 'Modality'):
+                    is_dicom = True
+                # 患者IDがあればDICOMファイル
+                elif hasattr(dcm, 'PatientID'):
+                    is_dicom = True
+                # 少なくとも5つ以上のDICOMタグがあればDICOMファイルとみなす
+                elif len(dcm) >= 5:
+                    is_dicom = True
+                
+                if is_dicom:
                     dicom_files.append(file_path)
-            except:
+            except Exception as e:
+                # エラーの詳細をログに出力（デバッグ用）
+                # print(f"ファイル読み込みエラー: {file_path} - {e}")
                 pass
     
     return dicom_files

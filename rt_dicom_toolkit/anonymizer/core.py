@@ -159,10 +159,38 @@ class RTDicomAnonymizer:
         
         # プライベートタグの処理
         if remove_private_tags:
-            private_tags = [tag for tag in dcm.keys() if tag.is_private]
+            # プライベートタグを検索（再帰的に全ての階層を検索）
+            private_tags = []
+            
+            def find_private_tags(dataset):
+                # 現在のデータセットのプライベートタグを収集
+                current_private_tags = [tag for tag in dataset.keys() if tag.is_private]
+                private_tags.extend(current_private_tags)
+                
+                # シーケンス内の各アイテムを再帰的に処理
+                for elem in dataset.values():
+                    if elem.VR == "SQ" and elem.value:
+                        for item in elem.value:
+                            if item is not None:
+                                find_private_tags(item)
+            
+            # プライベートタグを検索
+            find_private_tags(dcm)
+            
+            # プライベートタグを削除
             for tag in private_tags:
-                if tag in dcm:
-                    del dcm[tag]
+                try:
+                    # タグが属するデータセットを特定
+                    if hasattr(tag, 'parent'):
+                        parent_dataset = tag.parent
+                    else:
+                        parent_dataset = dcm
+                    
+                    # タグを削除
+                    if tag in parent_dataset:
+                        del parent_dataset[tag]
+                except Exception as e:
+                    self.logger.warning(f"プライベートタグ {tag} の削除中にエラー: {e}")
             
             self.log_message(f"{len(private_tags)}個のプライベートタグを削除しました")
         
@@ -334,6 +362,28 @@ class RTDicomAnonymizer:
                         
                         # 匿名化されたDICOMを保存
                         try:
+                            # 警告メッセージを抑制するために、特定のタグの長さを確認して調整
+                            for tag_name in ["StationName", "InstitutionName", "ReferringPhysicianName"]:
+                                if hasattr(dcm, tag_name):
+                                    value = getattr(dcm, tag_name)
+                                    # SH (Short String) タイプのタグは16文字以内に制限
+                                    if len(str(value)) > 16:
+                                        setattr(dcm, tag_name, str(value)[:16])
+                                        self.logger.warning(f"{tag_name}の値が長すぎるため切り詰めました: {value} -> {str(value)[:16]}")
+                            
+                            # UIタイプのタグを確認（MIMなどの無効な値を修正）
+                            for elem in dcm:
+                                if elem.VR == "UI" and elem.value and not str(elem.value).startswith("1.2."):
+                                    # UIタイプは通常1.2.で始まるUID形式
+                                    if str(elem.value) == "MIM":
+                                        # MIMを有効なUIDに置き換え
+                                        elem.value = generate_uid()
+                                        self.logger.warning(f"無効なUI値を修正: {elem.tag} MIM -> {elem.value}")
+                            
+                            # 出力ディレクトリが存在することを確認
+                            output_path.parent.mkdir(parents=True, exist_ok=True)
+                            
+                            # ファイルを保存
                             dcm.save_as(str(output_path))
                             self.log_message(f"匿名化ファイル保存完了: {output_path.name}")
                         except Exception as save_error:

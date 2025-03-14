@@ -248,12 +248,12 @@ class ValidatorGUI:
             # 必須匿名化タグを追加
             for tag, info in results["must_anonymize"].items():
                 # 表示する原本値を処理（長すぎる場合は省略）
-                orig_value = info["original"]
+                orig_value = str(info["original"])
                 if len(orig_value) > 50:
                     orig_value = orig_value[:47] + "..."
                 
                 # 表示する匿名化値を処理
-                anon_value = info["anonymized"]
+                anon_value = str(info["anonymized"])
                 if len(anon_value) > 50:
                     anon_value = anon_value[:47] + "..."
                 
@@ -269,11 +269,11 @@ class ValidatorGUI:
             # UIDタグを追加
             for tag, info in results["uid_tags"].items():
                 # UIDは長いので省略表示
-                orig_value = info["original"]
+                orig_value = str(info["original"])
                 if len(orig_value) > 20:
                     orig_value = orig_value[:17] + "..."
                 
-                anon_value = info["anonymized"]
+                anon_value = str(info["anonymized"])
                 if len(anon_value) > 20:
                     anon_value = anon_value[:17] + "..."
                 
@@ -287,11 +287,11 @@ class ValidatorGUI:
             
             # 構造タグを追加
             for tag, info in results["structure_tags"].items():
-                orig_value = info["original"]
+                orig_value = str(info["original"])
                 if len(orig_value) > 50:
                     orig_value = orig_value[:47] + "..."
                 
-                anon_value = info["anonymized"]
+                anon_value = str(info["anonymized"])
                 if len(anon_value) > 50:
                     anon_value = anon_value[:47] + "..."
                 
@@ -305,11 +305,11 @@ class ValidatorGUI:
             
             # オプション匿名化タグを追加
             for tag, info in results["optional_tags"].items():
-                orig_value = info["original"]
+                orig_value = str(info["original"])
                 if len(orig_value) > 50:
                     orig_value = orig_value[:47] + "..."
                 
-                anon_value = info["anonymized"]
+                anon_value = str(info["anonymized"])
                 if len(anon_value) > 50:
                     anon_value = anon_value[:47] + "..."
                 
@@ -328,11 +328,11 @@ class ValidatorGUI:
             
             # RT特有タグを追加
             for tag, info in results["rt_specific_tags"].items():
-                orig_value = info["original"]
+                orig_value = str(info["original"])
                 if len(orig_value) > 50:
                     orig_value = orig_value[:47] + "..."
                 
-                anon_value = info["anonymized"]
+                anon_value = str(info["anonymized"])
                 if len(anon_value) > 50:
                     anon_value = anon_value[:47] + "..."
                 
@@ -542,9 +542,9 @@ class ValidatorGUI:
                 self.status_var.set("検証完了")
                 self.validator.update_summary(report)
                 
-                # サマリータブに切り替え
-                self.notebook.select(1)
-                messagebox.showinfo("検証完了", "検証が完了しました。結果はサマリータブで確認できます。")
+                # 詳細タブに切り替え
+                self.notebook.select(3)  # 詳細タブのインデックスは3
+                messagebox.showinfo("検証完了", "検証が完了しました。詳細タブで結果を確認できます。サマリータブでは全体の統計情報を確認できます。")
             else:
                 self.status_var.set("検証エラー")
                 messagebox.showerror("エラー", "検証中にエラーが発生しました。")
